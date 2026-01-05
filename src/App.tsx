@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -143,12 +144,15 @@ function App() {
           {/* Sidebar (filters) */}
           <aside className="lg:sticky lg:top-8 lg:self-start">
             <div className="flex flex-col gap-2">
-              <Input
-                className="w-full mb-4"
-                placeholder="Search by title or series..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              <div className="relative w-full mb-4">
+                <Input
+                  className="w-full pr-10"
+                  placeholder="Search by title or series..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <MagnifyingGlassIcon className="absolute right-3 inset-y-0 my-auto text-gray-400 pointer-events-none" />
+              </div>
 
               {/* Mobile toggle */}
               <Button
@@ -440,10 +444,9 @@ Improvements:
 
 - ✅ Move filter and sort into a sidebar component, only stacking vertically on mobile.
 - ✅ Force 16:9 aspect ratio for sermon images to avoid overflow.
-- Add pagination for large sermon lists.
+- ✅ Add pagination for large sermon lists.
 - Add lazy loading for sermon images.
 - Include date in sermon cards.
-- Set NBBC color theme (green monochrome)
 - Clean up app.tsx, split into smaller components.
-- Update favicon to NBBC logo.
+- ✅ Update favicon to NBBC logo.
 */
