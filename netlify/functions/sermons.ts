@@ -9,6 +9,7 @@ type Sermon = {
   title: string
   series?: string
   part?: number
+  preacher: string
   link: string
   length: number
   image: string
@@ -26,7 +27,7 @@ export const handler: Handler = async () => {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "sermons!A2:G",
+      range: "sermons!A2:H",
     })
 
     const rows = response.data.values || []
@@ -38,6 +39,7 @@ export const handler: Handler = async () => {
           TITLE,
           SERIES,
           PART,
+          PREACHER,
           LINK,
           LENGTH,
           IMAGE,
@@ -50,6 +52,7 @@ export const handler: Handler = async () => {
           title: TITLE || "",
           series: SERIES || undefined,
           part: PART ? Number(PART) : undefined,
+          preacher: PREACHER==="Luke Iannello" ? "" : "Presented by " + PREACHER,
           link: LINK,
           length: Number(LENGTH),
           image: IMAGE || PLACEHOLDER_IMAGE,

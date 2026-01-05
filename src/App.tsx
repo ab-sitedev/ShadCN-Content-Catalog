@@ -19,18 +19,21 @@ import {
 
 type Sermon = {
   date: string
-  title: string
+  title?: string
   series?: string
   part?: number
+  preacher: string
   link: string
   length: number
-  image: string
+  image?: string
 }
+
+const PLACEHOLDER_IMAGE = "https://nbbc.imgix.net/base/home-jumbotron.jpg?auto=compress&fm=webp"
 
 function App() {
   const [sermons, setSermons] = useState<Sermon[]>([])
   const [search, setSearch] = useState("")
-  const [seriesFilter, setSeriesFilter] = useState<string>("all")
+  const [seriesFilter, setSeriesFilter] = useState("all")
   const [maxLength, setMaxLength] = useState<number | "">("")
   const [dateFrom, setDateFrom] = useState<Date | undefined>()
   const [dateTo, setDateTo] = useState<Date | undefined>()
@@ -40,245 +43,285 @@ function App() {
   useEffect(() => {
     fetch("/.netlify/functions/sermons")
       .then((res) => res.json())
-      .then((data) => setSermons(data))
+      .then((data) => {
+        console.log("Fetched sermons:", data)
+        setSermons(data)
+      })
       .catch((err) => console.error("Failed to fetch sermons:", err))
   }, [])
-
-  const PLACEHOLDER_IMAGE ="https://placehold.co/600x400"
 
   const uniqueSeries = Array.from(
     new Set(sermons.map((s) => s.series).filter(Boolean))
   ) as string[]
 
-  // Apply filters
+  // Filtering
   const filteredSermons = sermons.filter((s) => {
     const sermonDate = new Date(s.date)
 
     const keywordMatch =
-      s.title.toLowerCase().includes(search.toLowerCase()) ||
+      (s.title?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       (s.series?.toLowerCase().includes(search.toLowerCase()) ?? false)
 
     const seriesMatch = seriesFilter === "all" || s.series === seriesFilter
-
     const lengthMatch = maxLength === "" || s.length <= Number(maxLength)
-
     const fromMatch = !dateFrom || sermonDate >= dateFrom
     const toMatch = !dateTo || sermonDate <= dateTo
 
     return keywordMatch && seriesMatch && lengthMatch && fromMatch && toMatch
   })
 
-  // Apply sorting
+  // Sorting
   const sortedSermons = [...filteredSermons].sort((a, b) => {
     if (sortBy === "none") return 0
 
     if (sortBy === "date") {
-      const dateA = new Date(a.date).getTime()
-      const dateB = new Date(b.date).getTime()
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA
+      const aTime = new Date(a.date).getTime()
+      const bTime = new Date(b.date).getTime()
+      return sortOrder === "asc" ? aTime - bTime : bTime - aTime
     }
 
     if (sortBy === "length") {
-      return sortOrder === "asc" ? a.length - b.length : b.length - a.length
+      return sortOrder === "asc"
+        ? a.length - b.length
+        : b.length - a.length
     }
 
     return 0
   })
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Sermon Catalog
-      </h1>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="mx-auto max-w-[1000px]">
+        <h1 className="mb-6 text-center text-3xl font-bold">
+          New Beginnings Baptist Church<br></br>Online Sermon Catalog
+        </h1>
 
-      {/* Filter Panel */}
-      <div className="flex flex-wrap gap-4 mb-6 justify-center bg-white p-4 rounded-lg shadow-md">
-        {/* Keyword search */}
-        <Input
-          placeholder="Search by title or series..."
-          className="w-64"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        {/* Filters */}
+        <div className="mb-6 flex flex-wrap justify-center gap-4 rounded-lg bg-white p-4 shadow-md">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-wrap gap-4">
+              <p className="w-full text-sm font-medium text-gray-500">
+                Filter by
+              </p>
+              <Input
+                className="w-full md:w-64"
+                placeholder="Search by title or series..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
 
-        {/* Series Select */}
-        <Select value={seriesFilter} onValueChange={(val) => setSeriesFilter(val)}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="All Series" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Series</SelectItem>
-            {uniqueSeries.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              <Select value={seriesFilter} onValueChange={setSeriesFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="All Series" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Series</SelectItem>
+                  {uniqueSeries.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-        {/* Max length */}
-        <Input
-          type="number"
-          placeholder="Max length (min)"
-          className="w-32"
-          value={maxLength}
-          onChange={(e) =>
-            setMaxLength(e.target.value === "" ? "" : Number(e.target.value))
-          }
-        />
+              <Input
+                type="number"
+                className="w-32"
+                placeholder="Max length"
+                value={maxLength}
+                onChange={(e) =>
+                  setMaxLength(e.target.value === "" ? "" : Number(e.target.value))
+                }
+              />
 
-        {/* Date From */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              {dateFrom ? dateFrom.toISOString().slice(0, 10) : "From Date"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={dateFrom}
-              onSelect={(date) => setDateFrom(date || undefined)}
-            />
-          </PopoverContent>
-        </Popover>
+              <div className="flex flex-wrap gap-4">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline">
+                      {dateFrom ? dateFrom.toISOString().slice(0, 10) : "From Date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(d) => setDateFrom(d || undefined)}
+                    />
+                  </PopoverContent>
+                </Popover>
 
-        {/* Date To */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              {dateTo ? dateTo.toISOString().slice(0, 10) : "To Date"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={dateTo}
-              onSelect={(date) => setDateTo(date || undefined)}
-            />
-          </PopoverContent>
-        </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline">
+                      {dateTo ? dateTo.toISOString().slice(0, 10) : "To Date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(d) => setDateTo(d || undefined)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
 
-        {/* Sort controls */}
-        <div className="flex gap-2 items-center">
-          <Select value={sortBy} onValueChange={(val) => setSortBy(val as any)}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Sort By" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="length">Length</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className="flex flex-wrap items-center gap-4">
+              <p className="w-full text-sm font-medium text-gray-500">
+                Sort by
+              </p>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger className="w-full md:w-40">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="length">Length</SelectItem>
+                </SelectContent>
+              </Select>
 
+              {sortBy !== "none" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                  }
+                >
+                  {sortOrder === "asc" ? "↑ Asc" : "↓ Desc"}
+                </Button>
+              )}
+            </div>
+          </div>
+          <Button
+            className="mr-auto"
+            variant="secondary"
+            onClick={() => {
+              setSearch("")
+              setSeriesFilter("all")
+              setMaxLength("")
+              setDateFrom(undefined)
+              setDateTo(undefined)
+              setSortBy("none")
+              setSortOrder("desc")
+            }}
+          >
+            Clear Filters
+          </Button>
+        </div>
+
+        {/* Active filter pills */}
+        <div className="mb-4 flex flex-wrap justify-center gap-2">
+          {search && (
+            <Badge onClick={() => setSearch("")} className="cursor-pointer">
+              🔍 {search} ×
+            </Badge>
+          )}
+          {seriesFilter !== "all" && (
+            <Badge onClick={() => setSeriesFilter("all")} className="cursor-pointer">
+              Series: {seriesFilter} ×
+            </Badge>
+          )}
+          {maxLength !== "" && (
+            <Badge onClick={() => setMaxLength("")} className="cursor-pointer">
+              Max Length: {maxLength} ×
+            </Badge>
+          )}
+          {dateFrom && (
+            <Badge onClick={() => setDateFrom(undefined)} className="cursor-pointer">
+              From: {dateFrom.toISOString().slice(0, 10)} ×
+            </Badge>
+          )}
+          {dateTo && (
+            <Badge onClick={() => setDateTo(undefined)} className="cursor-pointer">
+              To: {dateTo.toISOString().slice(0, 10)} ×
+            </Badge>
+          )}
           {sortBy !== "none" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-              }
+            <Badge
+              onClick={() => {
+                setSortBy("none")
+                setSortOrder("desc")
+              }}
+              className="cursor-pointer"
             >
-              {sortOrder === "asc" ? "↑ Asc" : "↓ Desc"}
-            </Button>
+              Sort: {sortBy} ({sortOrder}) ×
+            </Badge>
           )}
         </div>
 
-        {/* Clear Filters */}
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setSearch("")
-            setSeriesFilter("all")
-            setMaxLength("")
-            setDateFrom(undefined)
-            setDateTo(undefined)
-            setSortBy("none")
-            setSortOrder("desc")
-          }}
-        >
-          Clear Filters
-        </Button>
-      </div>
-      {/* Active Filters */}
-      <div className="flex flex-wrap gap-2 mb-4 justify-center">
-        {/* Search pill */}
-        {search && (
-          <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearch("")}>
-            🔍 {search} ×
-          </Badge>
-        )}
+        {/* Sermon grid */}
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
+          {sortedSermons.map((sermon, idx) => {
+            const imageUrl =
+              sermon.image?.trim() && sermon.image.trim() !== ""
+                ? sermon.image
+                : PLACEHOLDER_IMAGE
 
-        {/* Series pill */}
-        {seriesFilter !== "all" && (
-          <Badge variant="secondary" className="cursor-pointer" onClick={() => setSeriesFilter("all")}>
-            Series: {seriesFilter} ×
-          </Badge>
-        )}
+            console.log(
+              "IMAGE DEBUG →",
+              sermon.title ?? "(untitled)",
+              "| raw:",
+              sermon.image,
+              "| final:",
+              imageUrl
+            )
 
-        {/* Max length pill */}
-        {maxLength !== "" && (
-          <Badge variant="secondary" className="cursor-pointer" onClick={() => setMaxLength("")}>
-            Max Length: {maxLength} min ×
-          </Badge>
-        )}
-
-        {/* Date From pill */}
-        {dateFrom && (
-          <Badge variant="secondary" className="cursor-pointer" onClick={() => setDateFrom(undefined)}>
-            From: {dateFrom.toISOString().slice(0, 10)} ×
-          </Badge>
-        )}
-
-        {/* Date To pill */}
-        {dateTo && (
-          <Badge variant="secondary" className="cursor-pointer" onClick={() => setDateTo(undefined)}>
-            To: {dateTo.toISOString().slice(0, 10)} ×
-          </Badge>
-        )}
-
-        {/* Sort pill */}
-        {sortBy !== "none" && (
-          <Badge variant="secondary" className="cursor-pointer" onClick={() => { setSortBy("none"); setSortOrder("desc") }}>
-            Sort: {sortBy} ({sortOrder}) ×
-          </Badge>
-        )}
-      </div>
-
-      {/* Sermon Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {sortedSermons.map((sermon, idx) => (
-          <Card key={idx} className="overflow-hidden">
-            <img
-              src={sermon.image || PLACEHOLDER_IMAGE}
-              alt={sermon.title || "Sermon"}
-              className="h-40 w-full object-cover"
-            />
-            <CardContent className="p-4">
-              <h2 className="text-lg font-semibold mb-1">
-                {sermon.title || `Series ${sermon.series} - Part ${sermon.part}`}
-              </h2>
-              {sermon.series && (
-                <Badge className="mb-1">{sermon.series}</Badge>
-              )}
-              {sermon.part && (
-                <Badge variant="secondary" className="ml-1">
-                  Part {sermon.part}
-                </Badge>
-              )}
-              <p className="text-sm text-gray-500 mt-1">
-                {sermon.date} • {sermon.length} min
-              </p>
-              <Button
-                className="mt-3 w-full"
-                onClick={() => window.open(sermon.link, "_blank")}
+            return (
+              <Card
+                key={idx}
+                className="group overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg flex flex-col py-0 gap-0"
               >
-                Listen
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="relative">
+                  <img
+                    src={imageUrl}
+                    alt={sermon.title || "Sermon"}
+                    className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-102"
+                    onError={(e) => {
+                      e.currentTarget.src = PLACEHOLDER_IMAGE
+                    }}
+                  />
+
+                  {/* Runtime overlay (YouTube-style) */}
+                  <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
+                    {sermon.length} min
+                  </div>
+                </div>
+
+                <CardContent className="p-4 flex flex-col flex-1">
+                  <div className="flex-1">
+                    <h2 className="mb-1 text-md font-semibold line-clamp-2">
+                      {sermon.title ||
+                        `${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
+                    </h2>
+
+                    <div className="flex items-center gap-2 min-w-0">
+          {sermon.series && (
+            <Badge className="truncate max-w-full">
+              {sermon.series}
+            </Badge>
+          )}
+          {sermon.part && (
+            <Badge variant="secondary" className="flex-shrink-0 whitespace-nowrap">
+              Part {sermon.part}
+            </Badge>
+          )}
+        </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
+                  <Button
+                    className="mt-0 w-full"
+                    onClick={() => window.open(sermon.link, "_blank")}
+                  >
+                    Listen
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
