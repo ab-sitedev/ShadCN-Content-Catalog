@@ -136,9 +136,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-[1200px]">
-        <h1 className="mb-6 text-center text-3xl font-bold">
-          New Beginnings Baptist Church<br></br>Online Sermon Catalog
-        </h1>
+        <img src="/public/nbbc-badge.svg" alt="NBBC Badge" className="mx-auto md:ml-0 md:mr-auto mb-8 w-38" />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
           {/* Sidebar (filters) */}
