@@ -39,6 +39,9 @@ function App() {
   const [dateTo, setDateTo] = useState<Date | undefined>()
   const [sortBy, setSortBy] = useState<"date" | "length" | "none">("none")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const ITEMS_PER_PAGE = 20
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     fetch("/.netlify/functions/sermons")
@@ -50,13 +53,38 @@ function App() {
       .catch((err) => console.error("Failed to fetch sermons:", err))
   }, [])
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, seriesFilter, maxLength, dateFrom, dateTo, sortBy, sortOrder])
+
+
   const uniqueSeries = Array.from(
     new Set(sermons.map((s) => s.series).filter(Boolean))
   ) as string[]
 
   // Filtering
   const filteredSermons = sermons.filter((s) => {
-    const sermonDate = new Date(s.date)
+    const sermonDate = parseLocalDate(s.date)
+
+    const from = dateFrom
+      ? new Date(
+        dateFrom.getFullYear(),
+        dateFrom.getMonth(),
+        dateFrom.getDate()
+      )
+      : null
+
+    const to = dateTo
+      ? new Date(
+        dateTo.getFullYear(),
+        dateTo.getMonth(),
+        dateTo.getDate(),
+        23,
+        59,
+        59,
+        999
+      )
+      : null
 
     const keywordMatch =
       (s.title?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
@@ -64,11 +92,13 @@ function App() {
 
     const seriesMatch = seriesFilter === "all" || s.series === seriesFilter
     const lengthMatch = maxLength === "" || s.length <= Number(maxLength)
-    const fromMatch = !dateFrom || sermonDate >= dateFrom
-    const toMatch = !dateTo || sermonDate <= dateTo
+    const fromMatch = !from || sermonDate >= from
+    const toMatch = !to || sermonDate <= to
 
     return keywordMatch && seriesMatch && lengthMatch && fromMatch && toMatch
   })
+
+
 
   // Sorting
   const sortedSermons = [...filteredSermons].sort((a, b) => {
@@ -89,238 +119,314 @@ function App() {
     return 0
   })
 
+  const totalPages = Math.ceil(sortedSermons.length / ITEMS_PER_PAGE)
+
+  const paginatedSermons = sortedSermons.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
+
+
+  function parseLocalDate(dateString: string) {
+    const [year, month, day] = dateString.split("-").map(Number)
+    return new Date(year, month - 1, day)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-[1000px]">
+      <div className="mx-auto max-w-[1200px]">
         <h1 className="mb-6 text-center text-3xl font-bold">
           New Beginnings Baptist Church<br></br>Online Sermon Catalog
         </h1>
 
-        {/* Filters */}
-        <div className="mb-6 flex flex-wrap justify-center gap-4 rounded-lg bg-white p-4 shadow-md">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="flex flex-wrap gap-4">
-              <p className="w-full text-sm font-medium text-gray-500">
-                Filter by
-              </p>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Sidebar (filters) */}
+          <aside className="lg:sticky lg:top-8 lg:self-start">
+            <div className="flex flex-col gap-2">
               <Input
-                className="w-full md:w-64"
+                className="w-full mb-4"
                 placeholder="Search by title or series..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
 
-              <Select value={seriesFilter} onValueChange={setSeriesFilter}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="All Series" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Series</SelectItem>
-                  {uniqueSeries.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Input
-                type="number"
-                className="w-32"
-                placeholder="Max length"
-                value={maxLength}
-                onChange={(e) =>
-                  setMaxLength(e.target.value === "" ? "" : Number(e.target.value))
-                }
-              />
-
-              <div className="flex flex-wrap gap-4">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline">
-                      {dateFrom ? dateFrom.toISOString().slice(0, 10) : "From Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom}
-                      onSelect={(d) => setDateFrom(d || undefined)}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline">
-                      {dateTo ? dateTo.toISOString().slice(0, 10) : "To Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo}
-                      onSelect={(d) => setDateTo(d || undefined)}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <p className="w-full text-sm font-medium text-gray-500">
-                Sort by
-              </p>
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                <SelectTrigger className="w-full md:w-40">
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="length">Length</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {sortBy !== "none" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                  }
-                >
-                  {sortOrder === "asc" ? "↑ Asc" : "↓ Desc"}
-                </Button>
-              )}
-            </div>
-          </div>
-          <Button
-            className="mr-auto"
-            variant="secondary"
-            onClick={() => {
-              setSearch("")
-              setSeriesFilter("all")
-              setMaxLength("")
-              setDateFrom(undefined)
-              setDateTo(undefined)
-              setSortBy("none")
-              setSortOrder("desc")
-            }}
-          >
-            Clear Filters
-          </Button>
-        </div>
-
-        {/* Active filter pills */}
-        <div className="mb-4 flex flex-wrap justify-center gap-2">
-          {search && (
-            <Badge onClick={() => setSearch("")} className="cursor-pointer">
-              🔍 {search} ×
-            </Badge>
-          )}
-          {seriesFilter !== "all" && (
-            <Badge onClick={() => setSeriesFilter("all")} className="cursor-pointer">
-              Series: {seriesFilter} ×
-            </Badge>
-          )}
-          {maxLength !== "" && (
-            <Badge onClick={() => setMaxLength("")} className="cursor-pointer">
-              Max Length: {maxLength} ×
-            </Badge>
-          )}
-          {dateFrom && (
-            <Badge onClick={() => setDateFrom(undefined)} className="cursor-pointer">
-              From: {dateFrom.toISOString().slice(0, 10)} ×
-            </Badge>
-          )}
-          {dateTo && (
-            <Badge onClick={() => setDateTo(undefined)} className="cursor-pointer">
-              To: {dateTo.toISOString().slice(0, 10)} ×
-            </Badge>
-          )}
-          {sortBy !== "none" && (
-            <Badge
-              onClick={() => {
-                setSortBy("none")
-                setSortOrder("desc")
-              }}
-              className="cursor-pointer"
-            >
-              Sort: {sortBy} ({sortOrder}) ×
-            </Badge>
-          )}
-        </div>
-
-        {/* Sermon grid */}
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
-          {sortedSermons.map((sermon, idx) => {
-            const imageUrl =
-              sermon.image?.trim() && sermon.image.trim() !== ""
-                ? sermon.image
-                : PLACEHOLDER_IMAGE
-
-            console.log(
-              "IMAGE DEBUG →",
-              sermon.title ?? "(untitled)",
-              "| raw:",
-              sermon.image,
-              "| final:",
-              imageUrl
-            )
-
-            return (
-              <Card
-                key={idx}
-                className="group overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg flex flex-col py-0 gap-0"
+              {/* Mobile toggle */}
+              <Button
+                variant="outline"
+                className="lg:hidden"
+                onClick={() => setFiltersOpen((o) => !o)}
               >
-                <div className="relative">
-                  <img
-                    src={imageUrl}
-                    alt={sermon.title || "Sermon"}
-                    className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                    onError={(e) => {
-                      e.currentTarget.src = PLACEHOLDER_IMAGE
-                    }}
-                  />
+                {filtersOpen ? "Hide Filters" : "Show Filters"}
+              </Button>
+            </div>
+            <div
+              className={`flex flex-col gap-4 ${filtersOpen ? "block" : "hidden"
+                } lg:block`}
+            >
+              {/* Filters */}
+              <div className="mb-6 flex flex-col gap-4 rounded-lg bg-white p-4 shadow-md">
+                <div className="flex flex-col gap-4 md:flex-col md:items-start md:justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    <p className="w-full text-sm font-medium text-gray-500">
+                      Filter by
+                    </p>
 
-                  {/* Runtime overlay (YouTube-style) */}
-                  <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
-                    {sermon.length} min
+                    <Select value={seriesFilter} onValueChange={setSeriesFilter}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All Series" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Series</SelectItem>
+                        {uniqueSeries.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline">
+                            {dateFrom ? dateFrom.toISOString().slice(0, 10) : "From Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={dateFrom}
+                            onSelect={(d) => setDateFrom(d || undefined)}
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline">
+                            {dateTo ? dateTo.toISOString().slice(0, 10) : "To Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={dateTo}
+                            onSelect={(d) => setDateTo(d || undefined)}
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <Input
+                        type="number"
+                        min="0"
+                        className="w-32"
+                        placeholder="Max runtime"
+                        value={maxLength}
+                        onChange={(e) =>
+                          setMaxLength(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                      />
+                    </div>
+                  </div>
+                  {/* Active filter pills */}
+                  <div className="empty:hidden flex flex-wrap gap-2">
+                    {search && (
+                      <Badge onClick={() => setSearch("")} className="cursor-pointer">
+                        Keyword: {search} ×
+                      </Badge>
+                    )}
+                    {seriesFilter !== "all" && (
+                      <Badge onClick={() => setSeriesFilter("all")} className="cursor-pointer">
+                        Series: {seriesFilter} ×
+                      </Badge>
+                    )}
+                    {maxLength !== "" && (
+                      <Badge onClick={() => setMaxLength("")} className="cursor-pointer">
+                        Max Length: {maxLength} ×
+                      </Badge>
+                    )}
+                    {dateFrom && (
+                      <Badge onClick={() => setDateFrom(undefined)} className="cursor-pointer">
+                        From: {dateFrom.toISOString().slice(0, 10)} ×
+                      </Badge>
+                    )}
+                    {dateTo && (
+                      <Badge onClick={() => setDateTo(undefined)} className="cursor-pointer">
+                        To: {dateTo.toISOString().slice(0, 10)} ×
+                      </Badge>
+                    )}
+                    {sortBy !== "none" && (
+                      <Badge
+                        onClick={() => {
+                          setSortBy("none")
+                          setSortOrder("desc")
+                        }}
+                        className="cursor-pointer"
+                      >
+                        Sort: {sortBy} ({sortOrder}) ×
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="w-full text-sm font-medium text-gray-500">
+                      Sort by
+                    </p>
+                    <div className="flex gap-2">
+                      <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                        <SelectTrigger className="w-full md:w-40">
+                          <SelectValue placeholder="Sort By" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="date">Date</SelectItem>
+                          <SelectItem value="length">Length</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {sortBy !== "none" && (
+                        <Button
+                          className="h-auto"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                          }
+                        >
+                          {sortOrder === "asc" ? "↑ Asc" : "↓ Desc"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
+                <Button
+                  className="mr-auto"
+                  variant="secondary"
+                  onClick={() => {
+                    setSearch("")
+                    setSeriesFilter("all")
+                    setMaxLength("")
+                    setDateFrom(undefined)
+                    setDateTo(undefined)
+                    setSortBy("none")
+                    setSortOrder("desc")
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            </div>
+          </aside>
 
-                <CardContent className="p-4 flex flex-col flex-1">
-                  <div className="flex-1">
-                    <h2 className="mb-1 text-md font-semibold line-clamp-2">
-                      {sermon.title ||
-                        `${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
-                    </h2>
+          {/* Main content (grid) */}
+          <main>
+            {/* Sermon grid */}
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+              {paginatedSermons.map((sermon, idx) => {
+                const imageUrl =
+                  sermon.image?.trim() && sermon.image.trim() !== ""
+                    ? sermon.image
+                    : PLACEHOLDER_IMAGE
 
-                    <div className="flex items-center gap-2 min-w-0">
-          {sermon.series && (
-            <Badge className="truncate max-w-full">
-              {sermon.series}
-            </Badge>
-          )}
-          {sermon.part && (
-            <Badge variant="secondary" className="flex-shrink-0 whitespace-nowrap">
-              Part {sermon.part}
-            </Badge>
-          )}
-        </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
-                  <Button
-                    className="mt-0 w-full"
+                console.log(
+                  "IMAGE DEBUG →",
+                  sermon.title ?? "(untitled)",
+                  "| raw:",
+                  sermon.image,
+                  "| final:",
+                  imageUrl
+                )
+
+                return (
+                  <Card
+                    key={idx}
                     onClick={() => window.open(sermon.link, "_blank")}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        window.open(sermon.link, "_blank")
+                      }
+                    }}
+                    className="group cursor-pointer overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary flex flex-col py-0 gap-0"
                   >
-                    Listen
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
+                    <div className="relative">
+                      <img
+                        src={imageUrl}
+                        alt={sermon.title || "Sermon"}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.src = PLACEHOLDER_IMAGE
+                        }}
+                      />
+
+                      {/* Runtime overlay (YouTube-style) */}
+                      <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
+                        {sermon.length} min
+                      </div>
+                    </div>
+
+                    <CardContent className="p-4 flex flex-col flex-1">
+                      <div className="flex-1">
+                        <h2 className="mb-1 text-md font-semibold line-clamp-2">
+                          {sermon.title ||
+                            `${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
+                        </h2>
+
+                        <div className="flex items-center gap-2 min-w-0">
+                          {sermon.series && (
+                            <Badge className="truncate max-w-full">
+                              {sermon.series}
+                            </Badge>
+                          )}
+                          {sermon.part && (
+                            <Badge variant="secondary" className="flex-shrink-0 whitespace-nowrap">
+                              Part {sermon.part}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const page = i + 1
+                  return (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  )
+                })}
+
+                <Button
+                  variant="outline"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+
+          </main>
         </div>
       </div>
     </div>
@@ -328,3 +434,16 @@ function App() {
 }
 
 export default App
+
+/*
+Improvements:
+
+- ✅ Move filter and sort into a sidebar component, only stacking vertically on mobile.
+- ✅ Force 16:9 aspect ratio for sermon images to avoid overflow.
+- Add pagination for large sermon lists.
+- Add lazy loading for sermon images.
+- Include date in sermon cards.
+- Set NBBC color theme (green monochrome)
+- Clean up app.tsx, split into smaller components.
+- Update favicon to NBBC logo.
+*/
