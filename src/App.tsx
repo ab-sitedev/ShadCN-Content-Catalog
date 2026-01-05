@@ -447,4 +447,5 @@ Improvements:
 - Include date in sermon cards.
 - Clean up app.tsx, split into smaller components.
 - ✅ Update favicon to NBBC logo.
+- Rotate private key for Netlify function.
 */
