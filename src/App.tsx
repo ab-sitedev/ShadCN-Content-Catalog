@@ -503,5 +503,5 @@ Improvements:
 - ✅ Add "New" badge for sermons added in the last 14 days.
 - Clean up app.tsx, split into smaller components.
 - ✅ Update favicon to NBBC logo.
-- Rotate private key for Netlify function.
+- ✅ Rotate private key for Netlify function.
 */
