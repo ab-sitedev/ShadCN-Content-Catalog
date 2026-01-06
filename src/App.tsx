@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import SermonCardSkeleton from "@/components/SermonCardSkeleton"
 
 type Sermon = {
   date: string
@@ -43,6 +44,8 @@ function App() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const ITEMS_PER_PAGE = 20
   const [currentPage, setCurrentPage] = useState(1)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [loadStartTime] = useState(() => Date.now())
 
   useEffect(() => {
     fetch("/.netlify/functions/sermons")
@@ -52,6 +55,15 @@ function App() {
         setSermons(data)
       })
       .catch((err) => console.error("Failed to fetch sermons:", err))
+      .finally(() => {
+        const MIN_LOADING_TIME = 2000 // ms
+        const elapsed = Date.now() - loadStartTime
+        const remaining = Math.max(0, MIN_LOADING_TIME - elapsed)
+
+        setTimeout(() => {
+          setInitialLoading(false)
+        }, remaining)
+      })
   }, [])
 
   useEffect(() => {
@@ -132,6 +144,39 @@ function App() {
     const [year, month, day] = dateString.split("-").map(Number)
     return new Date(year, month - 1, day)
   }
+
+  function getRelativeTime(dateString: string) {
+    const sermonDate = parseLocalDate(dateString)
+    const now = new Date()
+
+    const diffMs = now.getTime() - sermonDate.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    const diffHours = Math.floor(diffMinutes / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    const diffWeeks = Math.floor(diffDays / 7)
+    const diffMonths = Math.floor(diffDays / 30)
+    const diffYears = Math.floor(diffDays / 365)
+
+    if (diffSeconds < 60) return "Just now"
+    if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes !== 1 ? "s" : ""} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`
+    if (diffWeeks < 5) return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`
+    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`
+
+    return `${diffYears} year${diffYears !== 1 ? "s" : ""} ago`
+  }
+
+  function isRecent(dateString: string, days = 14) {
+    const sermonDate = parseLocalDate(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - sermonDate.getTime()
+    const diffDays = diffMs / (1000 * 60 * 60 * 24)
+
+    return diffDays <= days
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -324,78 +369,87 @@ function App() {
           <main>
             {/* Sermon grid */}
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-              {paginatedSermons.map((sermon, idx) => {
-                const imageUrl =
-                  sermon.image?.trim() && sermon.image.trim() !== ""
-                    ? sermon.image
-                    : PLACEHOLDER_IMAGE
+              {initialLoading
+                ? Array.from({ length: ITEMS_PER_PAGE }).map((_, i) => (
+                  <SermonCardSkeleton key={i} />
+                ))
+                : paginatedSermons.map((sermon, idx) => {
+                  const showNew = isRecent(sermon.date)
+                  const imageUrl =
+                    sermon.image?.trim() && sermon.image.trim() !== ""
+                      ? sermon.image
+                      : PLACEHOLDER_IMAGE
 
-                console.log(
-                  "IMAGE DEBUG →",
-                  sermon.title ?? "(untitled)",
-                  "| raw:",
-                  sermon.image,
-                  "| final:",
-                  imageUrl
-                )
+                  return (
+                    <Card
+                      key={idx}
+                      onClick={() => window.open(sermon.link, "_blank")}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          window.open(sermon.link, "_blank")
+                        }
+                      }}
+                      className="fade-in group cursor-pointer overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary flex flex-col py-0 gap-0"
+                    >
+                      <div className="relative">
+                        <img
+                          src={imageUrl}
+                          alt={sermon.title || "Sermon"}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            e.currentTarget.src = PLACEHOLDER_IMAGE
+                          }}
+                        />
 
-                return (
-                  <Card
-                    key={idx}
-                    onClick={() => window.open(sermon.link, "_blank")}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        window.open(sermon.link, "_blank")
-                      }
-                    }}
-                    className="group cursor-pointer overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary flex flex-col py-0 gap-0"
-                  >
-                    <div className="relative">
-                      <img
-                        src={imageUrl}
-                        alt={sermon.title || "Sermon"}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          e.currentTarget.src = PLACEHOLDER_IMAGE
-                        }}
-                      />
-
-                      {/* Runtime overlay (YouTube-style) */}
-                      <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
-                        {sermon.length} min
-                      </div>
-                    </div>
-
-                    <CardContent className="p-4 flex flex-col flex-1">
-                      <div className="flex-1">
-                        <h2 className="mb-1 text-md font-semibold line-clamp-2">
-                          {sermon.title ||
-                            `${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
-                        </h2>
-
-                        <div className="flex items-center gap-2 min-w-0">
-                          {sermon.series && (
-                            <Badge className="truncate max-w-full">
-                              {sermon.series}
-                            </Badge>
-                          )}
-                          {sermon.part && (
-                            <Badge variant="secondary" className="flex-shrink-0 whitespace-nowrap">
-                              Part {sermon.part}
-                            </Badge>
-                          )}
+                        {/* Runtime overlay (YouTube-style) */}
+                        <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
+                          {sermon.length} min
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+
+                      {/* New badge for recent sermons */}
+                      {showNew && (
+                        <Badge className="absolute top-2 left-2 bg-green-600 text-white hover:bg-green-600">
+                          New
+                        </Badge>
+                      )}
+
+                      <CardContent className="p-4 flex flex-col flex-1">
+                        <div className="flex-1">
+                          <h2 className="my-1 text-md font-semibold line-clamp-2">
+                            {sermon.title ||
+                              //`${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
+                              `${sermon.series ?? "Series"}`}
+                          </h2>
+
+                          <div className="mb-2 flex items-center gap-2 min-w-0">
+                            {sermon.series && (
+                              <Badge>
+                                <p className="text-[10px] truncate max-w-full">{sermon.series}</p>
+                              </Badge>
+                            )}
+                            {sermon.part && (
+                              <Badge variant="secondary" className="flex-shrink-0 whitespace-nowrap">
+                                <p className="text-[10px] flex-shrink-0 whitespace-nowrap">
+                                  Part {sermon.part}
+                                </p>
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <p className="empty:hidden text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getRelativeTime(sermon.date)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
             </div>
             {/* Pagination */}
-            {totalPages > 1 && (
+            {!initialLoading && totalPages > 1 && (
               <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="outline"
@@ -443,8 +497,10 @@ Improvements:
 - ✅ Move filter and sort into a sidebar component, only stacking vertically on mobile.
 - ✅ Force 16:9 aspect ratio for sermon images to avoid overflow.
 - ✅ Add pagination for large sermon lists.
-- Add lazy loading for sermon images.
-- Include date in sermon cards.
+- ✅ Add lazy loading for sermon cards.
+- ✅ iframe CSP override (now its allowed to be embedded)
+- ✅ Include relative date in sermon cards. (3 weeks ago, 2 days ago, etc...)
+- ✅ Add "New" badge for sermons added in the last 14 days.
 - Clean up app.tsx, split into smaller components.
 - ✅ Update favicon to NBBC logo.
 - Rotate private key for Netlify function.

@@ -52,7 +52,7 @@ export const handler: Handler = async () => {
           title: TITLE || "",
           series: SERIES || undefined,
           part: PART ? Number(PART) : undefined,
-          preacher: PREACHER==="Luke Iannello" ? "" : "Presented by " + PREACHER,
+          preacher: (PREACHER==="Luke Iannello" || PREACHER==="") ? "" : "Presented by " + PREACHER,
           link: LINK,
           length: Number(LENGTH),
           image: IMAGE || PLACEHOLDER_IMAGE,
