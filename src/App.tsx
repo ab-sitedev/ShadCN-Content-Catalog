@@ -48,7 +48,7 @@ function App() {
   const [loadStartTime] = useState(() => Date.now())
 
   useEffect(() => {
-    fetch("/.netlify/functions/sermons")
+    fetch("/.netlify/functions/sermons", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         console.log("Fetched sermons:", data)
@@ -504,4 +504,6 @@ Improvements:
 - Clean up app.tsx, split into smaller components.
 - ✅ Update favicon to NBBC logo.
 - ✅ Rotate private key for Netlify function.
+- ✅ During alpha stage, disable caching on fetch to always get latest sermons.
+- In full release, implement a chaching strategy to avoid rate limits.
 */

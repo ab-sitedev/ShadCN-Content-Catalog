@@ -52,7 +52,7 @@ export const handler: Handler = async () => {
           title: TITLE || "",
           series: SERIES || undefined,
           part: PART ? Number(PART) : undefined,
-          preacher: (PREACHER==="Luke Iannello" || PREACHER==="") ? "" : "Presented by " + PREACHER,
+          preacher: (PREACHER === "Luke Iannello" || PREACHER === "") ? "" : "Presented by " + PREACHER,
           link: LINK,
           length: Number(LENGTH),
           image: IMAGE || PLACEHOLDER_IMAGE,
@@ -69,7 +69,9 @@ export const handler: Handler = async () => {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
       },
       body: JSON.stringify(sermons),
     }
