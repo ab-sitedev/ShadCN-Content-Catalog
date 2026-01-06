@@ -28,6 +28,7 @@ type Sermon = {
   link: string
   length: number
   image?: string
+  format: string
 }
 
 const PLACEHOLDER_IMAGE = "https://nbbc.imgix.net/base/home-jumbotron.jpg?auto=compress&fm=webp"
@@ -441,7 +442,7 @@ function App() {
                         </div>
                         <p className="empty:hidden text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
                         <p className="text-xs text-muted-foreground">
-                          {getRelativeTime(sermon.date)}
+                          {sermon.format} • {getRelativeTime(sermon.date)}
                         </p>
                       </CardContent>
                     </Card>
@@ -505,5 +506,6 @@ Improvements:
 - ✅ Update favicon to NBBC logo.
 - ✅ Rotate private key for Netlify function.
 - ✅ During alpha stage, disable caching on fetch to always get latest sermons.
+- ✅ Include file format (Video or Audio) in cards and filters.
 - In full release, implement a chaching strategy to avoid rate limits.
 */
