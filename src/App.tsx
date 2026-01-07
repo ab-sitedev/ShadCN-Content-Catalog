@@ -182,7 +182,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-[1200px]">
-        <img src="/images/nbbc-badge.svg" alt="NBBC Badge" className="mx-auto md:ml-0 md:mr-auto mb-8 w-38" />
+        <img src="/images/nbbc-badge-color.svg" alt="NBBC Badge" className="mx-auto md:ml-0 md:mr-auto mb-8 w-38" />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
           {/* Sidebar (filters) */}
@@ -506,6 +506,7 @@ Improvements:
 - ✅ Update favicon to NBBC logo.
 - ✅ Rotate private key for Netlify function.
 - ✅ During alpha stage, disable caching on fetch to always get latest sermons.
-- ✅ Include file format (Video or Audio) in cards and filters.
+- ✅ Include file format (Video or Audio) in cards.
+- Include file format in filters.
 - In full release, implement a chaching strategy to avoid rate limits.
 */
