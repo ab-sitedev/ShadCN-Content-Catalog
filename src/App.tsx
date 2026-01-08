@@ -509,4 +509,6 @@ Improvements:
 - ✅ Include file format (Video or Audio) in cards.
 - Include file format in filters.
 - In full release, implement a chaching strategy to avoid rate limits.
+- Incorporate filtering into URL query params for sharing and enabling the next enhancment:
+- Allow clicking on card badges to set filters (i.e. click on "Series" badge to filter by that series).
 */
