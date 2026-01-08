@@ -169,7 +169,7 @@ function App() {
     return `${diffYears} year${diffYears !== 1 ? "s" : ""} ago`
   }
 
-  function isRecent(dateString: string, days = 14) {
+  function isRecent(dateString: string, days = 3) {
     const sermonDate = parseLocalDate(dateString)
     const now = new Date()
     const diffMs = now.getTime() - sermonDate.getTime()
