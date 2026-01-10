@@ -1,19 +1,16 @@
 import { Handler } from "@netlify/functions"
 import { google } from "googleapis"
 
-const PLACEHOLDER_IMAGE =
-  "https://your-site.com/sermon-placeholder.jpg"
-
-type Sermon = {
-  date: string
-  title: string
-  series?: string
-  part?: number
-  preacher: string
-  link: string
-  length: number
-  image: string
-  format: string
+type Content = {
+    date: string;
+    title?: string;
+    series?: string;
+    part?: number;
+    author: string;
+    link: string;
+    length: number;
+    image?: string;
+    format: string;
 }
 
 export const handler: Handler = async () => {
@@ -28,19 +25,19 @@ export const handler: Handler = async () => {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: "sermons!A2:I",
+      range: process.env.RANGE
     })
 
     const rows = response.data.values || []
 
-    const sermons: Sermon[] = rows
+    const content: Content[] = rows
       .map((row) => {
         const [
           DATE,
           TITLE,
           SERIES,
           PART,
-          PREACHER,
+          AUTHOR,
           LINK,
           LENGTH,
           IMAGE,
@@ -54,10 +51,10 @@ export const handler: Handler = async () => {
           title: TITLE || "",
           series: SERIES || undefined,
           part: PART ? Number(PART) : undefined,
-          preacher: (PREACHER === "Luke Iannello" || PREACHER === "") ? "" : "Presented by " + PREACHER,
+          author: (AUTHOR === "Luke Iannello" || AUTHOR === "") ? "" : "Presented by " + AUTHOR,
           link: LINK,
           length: Number(LENGTH),
-          image: IMAGE || PLACEHOLDER_IMAGE,
+          image: IMAGE,
           format: FORMAT
         }
       })
@@ -66,7 +63,7 @@ export const handler: Handler = async () => {
         (a, b) =>
           new Date(b!.date).getTime() -
           new Date(a!.date).getTime()
-      ) as Sermon[]
+      ) as Content[]
 
     return {
       statusCode: 200,
@@ -76,13 +73,13 @@ export const handler: Handler = async () => {
         "Pragma": "no-cache",
         "Expires": "0",
       },
-      body: JSON.stringify(sermons),
+      body: JSON.stringify(content),
     }
   } catch (error) {
     console.error(error)
     return {
       statusCode: 500,
-      body: "Failed to load sermons",
+      body: JSON.stringify("Failed to load content"),
     }
   }
 }

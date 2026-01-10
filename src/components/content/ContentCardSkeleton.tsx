@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card"
 
-export default function SermonCardSkeleton() {
+export default function ContentCardSkeleton() {
   return (
     <Card className="overflow-hidden flex flex-col py-0 gap-0">
       {/* Image skeleton (16:9) */}
@@ -18,7 +18,7 @@ export default function SermonCardSkeleton() {
           <div className="h-4 w-16 rounded animate-shimmer" />
         </div>
 
-        {/* Preacher */}
+        {/* Author */}
         <div className="mt-2 h-3 w-1/2 rounded animate-shimmer" />
       </CardContent>
     </Card>
