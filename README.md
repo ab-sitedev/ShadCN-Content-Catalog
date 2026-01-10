@@ -1,3 +1,4 @@
+[![Netlify Status](https://api.netlify.com/api/v1/badges/daa41da6-0ccc-4117-bc82-c3007832e37d/deploy-status)](https://app.netlify.com/projects/sermoncatalog/deploys)
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
