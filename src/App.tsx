@@ -165,11 +165,15 @@ function App() {
   useEffect(() => {
     const sendHeight = () => {
       if (window.parent !== window) {
-        const height = document.documentElement.scrollHeight;
-        window.parent.postMessage({
-          type: 'resizeIframe',
-          height: height
-        }, '*');
+        const container = document.getElementById('app-container');
+        if (container) {
+          // Measure the container height plus the padding from parent div (p-8 = 2rem = 32px on each side = 64px total)
+          const height = container.offsetHeight + 64;
+          window.parent.postMessage({
+            type: 'resizeIframe',
+            height: height
+          }, '*');
+        }
       }
     };
 
@@ -180,8 +184,11 @@ function App() {
     window.addEventListener('resize', sendHeight);
 
     // Use ResizeObserver to detect content changes
+    const container = document.getElementById('app-container');
     const resizeObserver = new ResizeObserver(sendHeight);
-    resizeObserver.observe(document.body);
+    if (container) {
+      resizeObserver.observe(container);
+    }
 
     return () => {
       window.removeEventListener('resize', sendHeight);
@@ -332,7 +339,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-[1200px]" id="app-container">
         <img
           src="/images/nbbc-badge-color.svg"
           alt="NBBC Badge"
