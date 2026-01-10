@@ -1,6 +1,3 @@
-/******* EXTERNAL *******/
-import { useState } from "react";
-
 /******* INTERNAL *******/
 import FilterPanel from "@/components/filter-and-sort/FilterPanel";
 import FilterNotice from "@/components/content/FilterNotice";
