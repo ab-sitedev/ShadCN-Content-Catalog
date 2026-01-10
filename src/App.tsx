@@ -1,12 +1,22 @@
-import { useState, useEffect } from "react";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { useState, useEffect, useMemo } from "react";
+import { MagnifyingGlassIcon, ResetIcon } from "@radix-ui/react-icons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import SermonCardSkeleton from "@/components/SermonCardSkeleton";
 
 type Sermon = {
@@ -32,7 +42,9 @@ function App() {
 
   /******* FILTER STATES *******/
   const [search, setSearch] = useState(() => getQueryParam("q") ?? "");
-  const [seriesFilter, setSeriesFilter] = useState(() => getQueryParam("series") ?? "all");
+  const [seriesFilter, setSeriesFilter] = useState(
+    () => getQueryParam("series") ?? "all"
+  );
   const [maxLength, setMaxLength] = useState<number | "">(() => {
     const v = getQueryParam("maxLength");
     return v ? Number(v) : "";
@@ -48,8 +60,12 @@ function App() {
   const [formatFilter, setFormatFilter] = useState(() => {
     return getQueryParam("format") ?? "all";
   });
-  const [sortBy, setSortBy] = useState<"date" | "length" | "none">(() => (getQueryParam("sort") as any) ?? "none");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => (getQueryParam("order") as any) ?? "desc");
+  const [sortBy, setSortBy] = useState<"date" | "length" | "none">(
+    () => (getQueryParam("sort") as any) ?? "none"
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
+    () => (getQueryParam("order") as any) ?? "desc"
+  );
   const [currentPage, setCurrentPage] = useState(() => {
     const v = getQueryParam("page");
     return v ? Number(v) : 1;
@@ -61,6 +77,19 @@ function App() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadStartTime] = useState(() => Date.now());
   const [filterNotice, setFilterNotice] = useState<string | null>(null);
+  const [filterNoticeVisible, setFilterNoticeVisible] = useState(false);
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      search !== "" ||
+      seriesFilter !== "all" ||
+      maxLength !== "" ||
+      dateFrom !== undefined ||
+      dateTo !== undefined ||
+      formatFilter !== "all" ||
+      sortBy !== "none"
+    );
+  }, [search, seriesFilter, maxLength, dateFrom, dateTo, formatFilter, sortBy]);
 
   /******* END STATES *******/
   /******* BEGIN HELPER FUNCTIONS *******/
@@ -250,13 +279,22 @@ function App() {
     // If the series is already active, do nothing
     if (seriesFilter === series) return;
 
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth", // Smooth scrolling animation
+    });
     setSeriesFilter(series);
     setFilterNotice(`Filtered by series: ${series}`);
+    setFilterNoticeVisible(true);
 
-    // Auto-hide message after 2 seconds
+    // Hide visibility first (triggers fade-out), then clear content
+    setTimeout(() => {
+      setFilterNoticeVisible(false);
+    }, 2000);
+
     setTimeout(() => {
       setFilterNotice(null);
-    }, 2000);
+    }, 2700); // After fade-out completes (2000 + 500 opacity + 200 delay)
   }
 
   /******* END HELPER FUNCTIONS *******/
@@ -287,7 +325,11 @@ function App() {
               {/* Mobile toggle */}
               <Button
                 variant="outline"
-                className="lg:hidden"
+                className={
+                  filtersOpen
+                    ? "rounded-none rounded-tl-md rounded-tr-md lg:hidden"
+                    : "rounded-md lg:hidden"
+                }
                 onClick={() => setFiltersOpen((o) => !o)}
               >
                 {filtersOpen ? "Hide Filters" : "Show Filters"}
@@ -299,7 +341,7 @@ function App() {
               } lg:block`}
             >
               {/* Filters */}
-              <div className="mb-6 flex flex-col gap-4 rounded-lg bg-white p-4 shadow-md">
+              <div className="flex flex-col gap-4 rounded-br-lg rounded-bl-lg bg-white p-4 shadow-md lg:rounded-lg">
                 <div className="flex flex-col gap-4 md:flex-col md:items-start md:justify-between">
                   <div className="flex flex-wrap gap-2">
                     <p className="w-full text-sm font-medium text-gray-500">
@@ -484,9 +526,17 @@ function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+            <div
+              className={`grid transition-all duration-500 ease-out delay-200 ${
+                hasActiveFilters ? "grid-rows-[1fr] mt-4" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
                 <Button
-                  className="mr-auto"
-                  variant="secondary"
+                  className="relative min-h-[40px] w-full"
+                  variant="outline"
                   onClick={() => {
                     setSearch("");
                     setSeriesFilter("all");
@@ -498,7 +548,8 @@ function App() {
                     setSortOrder("desc");
                   }}
                 >
-                  Clear Filters
+                  Reset Filters
+                  <ResetIcon className="absolute right-3 inset-y-0 my-auto text-orange-400 pointer-events-none" />
                 </Button>
               </div>
             </div>
@@ -506,15 +557,19 @@ function App() {
 
           {/* Main content (grid) */}
           <main>
-            <div className="mb-4 h-[40px]">
-              <div
-                className={`h-full rounded-md bg-green-200 border-solid border-green-400 border-b-2 px-4 py-2 text-sm text-primary shadow-sm transition-all duration-500 ease-out ${
-                  filterNotice
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 -translate-y-2 pointer-events-none"
-                }`}
-              >
-                {filterNotice}
+            <div
+              className={`grid transition-all duration-500 ease-out delay-200 ${
+                filterNoticeVisible ? "grid-rows-[1fr] mb-4" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div
+                  className={`min-h-[40px] rounded-md bg-green-200 border-solid border-green-400 border-b-2 px-4 py-2 text-sm text-primary shadow-sm transition-opacity duration-500 ${
+                    filterNoticeVisible ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  {filterNotice}
+                </div>
               </div>
             </div>
 
@@ -684,4 +739,5 @@ Improvements:
 - In full release, implement a chaching strategy to avoid rate limits.
 - ✅ Incorporate filtering into URL query params for sharing and enabling the next enhancment:
 - ✅ Allow clicking on card badges to set filters (i.e. click on "Series" badge to filter by that series).
+- Improve keyword search. Currently only supports "starts with" logic.
 */
