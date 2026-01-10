@@ -290,11 +290,11 @@ function App() {
     // Hide visibility first (triggers fade-out), then clear content
     setTimeout(() => {
       setFilterNoticeVisible(false);
-    }, 2000);
+    }, 4000);
 
     setTimeout(() => {
       setFilterNotice(null);
-    }, 2700); // After fade-out completes (2000 + 500 opacity + 200 delay)
+    }, 4700); // After fade-out completes (4000 + 500 opacity + 200 delay)
   }
 
   /******* END HELPER FUNCTIONS *******/
