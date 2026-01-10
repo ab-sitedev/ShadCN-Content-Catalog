@@ -161,6 +161,34 @@ function App() {
     sortOrder,
   ]);
 
+  // Send iframe height to parent page for dynamic resizing
+  useEffect(() => {
+    const sendHeight = () => {
+      if (window.parent !== window) {
+        const height = document.documentElement.scrollHeight;
+        window.parent.postMessage({
+          type: 'resizeIframe',
+          height: height
+        }, '*');
+      }
+    };
+
+    // Send initial height
+    sendHeight();
+
+    // Send height on window resize
+    window.addEventListener('resize', sendHeight);
+
+    // Use ResizeObserver to detect content changes
+    const resizeObserver = new ResizeObserver(sendHeight);
+    resizeObserver.observe(document.body);
+
+    return () => {
+      window.removeEventListener('resize', sendHeight);
+      resizeObserver.disconnect();
+    };
+  }, [sermons.length, filtersOpen, filterNoticeVisible, currentPage, search, seriesFilter, maxLength, dateFrom, dateTo, formatFilter, sortBy]);
+
   const uniqueSeries = Array.from(
     new Set(sermons.map((s) => s.series).filter(Boolean))
   ) as string[];
@@ -280,6 +308,12 @@ function App() {
     if (seriesFilter === series) return;
 
     window.scrollTo(0, 0);
+
+    // Request parent to scroll if in iframe
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'scrollToTop' }, '*');
+    }
+
     setSeriesFilter(series);
     setFilterNotice(`Filtered by series: ${series}`);
     setFilterNoticeVisible(true);
