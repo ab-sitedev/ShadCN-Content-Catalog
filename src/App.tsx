@@ -1,188 +1,298 @@
-import { useState, useEffect } from "react"
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect } from "react";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import SermonCardSkeleton from "@/components/SermonCardSkeleton"
+} from "@/components/ui/popover";
+import SermonCardSkeleton from "@/components/SermonCardSkeleton";
 
 type Sermon = {
-  date: string
-  title?: string
-  series?: string
-  part?: number
-  preacher: string
-  link: string
-  length: number
-  image?: string
-  format: string
-}
+  date: string;
+  title?: string;
+  series?: string;
+  part?: number;
+  preacher: string;
+  link: string;
+  length: number;
+  image?: string;
+  format: string;
+};
 
-const PLACEHOLDER_IMAGE = "https://nbbc.imgix.net/base/home-jumbotron.jpg?auto=compress&fm=webp"
+const PLACEHOLDER_IMAGE =
+  "https://nbbc.imgix.net/base/home-jumbotron.jpg?auto=compress&fm=webp";
 
 function App() {
-  const [sermons, setSermons] = useState<Sermon[]>([])
-  const [search, setSearch] = useState("")
-  const [seriesFilter, setSeriesFilter] = useState("all")
-  const [maxLength, setMaxLength] = useState<number | "">("")
-  const [dateFrom, setDateFrom] = useState<Date | undefined>()
-  const [dateTo, setDateTo] = useState<Date | undefined>()
-  const [sortBy, setSortBy] = useState<"date" | "length" | "none">("none")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const ITEMS_PER_PAGE = 20
-  const [currentPage, setCurrentPage] = useState(1)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [loadStartTime] = useState(() => Date.now())
+  /******* BEGIN STATES *******/
+
+  /******* SERMONS *******/
+  const [sermons, setSermons] = useState<Sermon[]>([]);
+
+  /******* FILTER STATES *******/
+  // const [search, setSearch] = useState("")
+  // const [seriesFilter, setSeriesFilter] = useState("all")
+  // const [maxLength, setMaxLength] = useState<number | "">("")
+  // const [dateFrom, setDateFrom] = useState<Date | undefined>()
+  // const [dateTo, setDateTo] = useState<Date | undefined>()
+  // const [sortBy, setSortBy] = useState<"date" | "length" | "none">("none")
+  // const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  // const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState(() => getQueryParam("q") ?? "");
+  const [seriesFilter, setSeriesFilter] = useState(
+    () => getQueryParam("series") ?? "all"
+  );
+  const [maxLength, setMaxLength] = useState<number | "">(() => {
+    const v = getQueryParam("maxLength");
+    return v ? Number(v) : "";
+  });
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(() => {
+    const v = getQueryParam("from");
+    return v ? parseLocalDate(v) : undefined;
+  });
+  const [dateTo, setDateTo] = useState<Date | undefined>(() => {
+    const v = getQueryParam("to");
+    return v ? parseLocalDate(v) : undefined;
+  });
+  const [formatFilter, setFormatFilter] = useState(() => {
+    return getQueryParam("format") ?? "all";
+  });
+  const [sortBy, setSortBy] = useState<"date" | "length" | "none">(
+    () => (getQueryParam("sort") as any) ?? "none"
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
+    () => (getQueryParam("order") as any) ?? "desc"
+  );
+  const [currentPage, setCurrentPage] = useState(() => {
+    const v = getQueryParam("page");
+    return v ? Number(v) : 1;
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /******* UTILITIES *******/
+  const ITEMS_PER_PAGE = 20;
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadStartTime] = useState(() => Date.now());
+  const [filterNotice, setFilterNotice] = useState<string | null>(null);
+
+  /******* END STATES *******/
+  /******* BEGIN HELPER FUNCTIONS *******/
+
+  function getQueryParam(name: string) {
+    return new URLSearchParams(window.location.search).get(name);
+  }
 
   useEffect(() => {
     fetch("/.netlify/functions/sermons", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        console.log("Fetched sermons:", data)
-        setSermons(data)
+        console.log("Fetched sermons:", data);
+        setSermons(data);
       })
       .catch((err) => console.error("Failed to fetch sermons:", err))
       .finally(() => {
-        const MIN_LOADING_TIME = 2000 // ms
-        const elapsed = Date.now() - loadStartTime
-        const remaining = Math.max(0, MIN_LOADING_TIME - elapsed)
+        const MIN_LOADING_TIME = 2000; // ms
+        const elapsed = Date.now() - loadStartTime;
+        const remaining = Math.max(0, MIN_LOADING_TIME - elapsed);
 
         setTimeout(() => {
-          setInitialLoading(false)
-        }, remaining)
-      })
-  }, [])
+          setInitialLoading(false);
+        }, remaining);
+      });
+  }, []);
 
   useEffect(() => {
-    setCurrentPage(1)
-  }, [search, seriesFilter, maxLength, dateFrom, dateTo, sortBy, sortOrder])
+    const params = new URLSearchParams();
 
+    if (search) params.set("q", search);
+    if (seriesFilter !== "all") params.set("series", seriesFilter);
+    if (maxLength !== "") params.set("maxLength", String(maxLength));
+    if (dateFrom) params.set("from", dateFrom.toISOString().slice(0, 10));
+    if (dateTo) params.set("to", dateTo.toISOString().slice(0, 10));
+    if (formatFilter !== "all") params.set("format", formatFilter);
+    if (sortBy !== "none") params.set("sort", sortBy);
+    if (sortBy !== "none") params.set("order", sortOrder);
+    if (currentPage !== 1) params.set("page", String(currentPage));
+
+    const newUrl =
+      params.toString().length > 0
+        ? `?${params.toString()}`
+        : window.location.pathname;
+
+    window.history.replaceState(null, "", newUrl);
+  }, [
+    search,
+    seriesFilter,
+    maxLength,
+    dateFrom,
+    dateTo,
+    formatFilter,
+    sortBy,
+    sortOrder,
+    currentPage,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    search,
+    seriesFilter,
+    maxLength,
+    dateFrom,
+    dateTo,
+    formatFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const uniqueSeries = Array.from(
     new Set(sermons.map((s) => s.series).filter(Boolean))
-  ) as string[]
+  ) as string[];
 
   // Filtering
   const filteredSermons = sermons.filter((s) => {
-    const sermonDate = parseLocalDate(s.date)
+    const sermonDate = parseLocalDate(s.date);
 
     const from = dateFrom
       ? new Date(
-        dateFrom.getFullYear(),
-        dateFrom.getMonth(),
-        dateFrom.getDate()
-      )
-      : null
+          dateFrom.getFullYear(),
+          dateFrom.getMonth(),
+          dateFrom.getDate()
+        )
+      : null;
 
     const to = dateTo
       ? new Date(
-        dateTo.getFullYear(),
-        dateTo.getMonth(),
-        dateTo.getDate(),
-        23,
-        59,
-        59,
-        999
-      )
-      : null
+          dateTo.getFullYear(),
+          dateTo.getMonth(),
+          dateTo.getDate(),
+          23,
+          59,
+          59,
+          999
+        )
+      : null;
 
     const keywordMatch =
       (s.title?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (s.series?.toLowerCase().includes(search.toLowerCase()) ?? false)
+      (s.series?.toLowerCase().includes(search.toLowerCase()) ?? false);
 
-    const seriesMatch = seriesFilter === "all" || s.series === seriesFilter
-    const lengthMatch = maxLength === "" || s.length <= Number(maxLength)
-    const fromMatch = !from || sermonDate >= from
-    const toMatch = !to || sermonDate <= to
+    const seriesMatch = seriesFilter === "all" || s.series === seriesFilter;
+    const lengthMatch = maxLength === "" || s.length <= Number(maxLength);
+    const fromMatch = !from || sermonDate >= from;
+    const toMatch = !to || sermonDate <= to;
+    const formatMatch =
+      formatFilter === "all" || s.format?.toLowerCase() === formatFilter;
 
-    return keywordMatch && seriesMatch && lengthMatch && fromMatch && toMatch
-  })
-
-
+    return (
+      keywordMatch &&
+      seriesMatch &&
+      lengthMatch &&
+      fromMatch &&
+      toMatch &&
+      formatMatch
+    );
+  });
 
   // Sorting
   const sortedSermons = [...filteredSermons].sort((a, b) => {
-    if (sortBy === "none") return 0
+    if (sortBy === "none") return 0;
 
     if (sortBy === "date") {
-      const aTime = new Date(a.date).getTime()
-      const bTime = new Date(b.date).getTime()
-      return sortOrder === "asc" ? aTime - bTime : bTime - aTime
+      const aTime = new Date(a.date).getTime();
+      const bTime = new Date(b.date).getTime();
+      return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
     }
 
     if (sortBy === "length") {
-      return sortOrder === "asc"
-        ? a.length - b.length
-        : b.length - a.length
+      return sortOrder === "asc" ? a.length - b.length : b.length - a.length;
     }
 
-    return 0
-  })
+    return 0;
+  });
 
-  const totalPages = Math.ceil(sortedSermons.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(sortedSermons.length / ITEMS_PER_PAGE);
 
   const paginatedSermons = sortedSermons.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
-  )
-
+  );
 
   function parseLocalDate(dateString: string) {
-    const [year, month, day] = dateString.split("-").map(Number)
-    return new Date(year, month - 1, day)
+    const [year, month, day] = dateString.split("-").map(Number);
+    return new Date(year, month - 1, day);
   }
 
   function getRelativeTime(dateString: string) {
-    const sermonDate = parseLocalDate(dateString)
-    const now = new Date()
+    const sermonDate = parseLocalDate(dateString);
+    const now = new Date();
 
-    const diffMs = now.getTime() - sermonDate.getTime()
-    const diffSeconds = Math.floor(diffMs / 1000)
-    const diffMinutes = Math.floor(diffSeconds / 60)
-    const diffHours = Math.floor(diffMinutes / 60)
-    const diffDays = Math.floor(diffHours / 24)
-    const diffWeeks = Math.floor(diffDays / 7)
-    const diffMonths = Math.floor(diffDays / 30)
-    const diffYears = Math.floor(diffDays / 365)
+    const diffMs = now.getTime() - sermonDate.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
 
-    if (diffSeconds < 60) return "Just now"
-    if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes !== 1 ? "s" : ""} ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`
-    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`
-    if (diffWeeks < 5) return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`
-    if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`
+    if (diffSeconds < 60) return "Just now";
+    if (diffMinutes < 60)
+      return `${diffMinutes} min${diffMinutes !== 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+    if (diffWeeks < 5)
+      return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`;
+    if (diffMonths < 12)
+      return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`;
 
-    return `${diffYears} year${diffYears !== 1 ? "s" : ""} ago`
+    return `${diffYears} year${diffYears !== 1 ? "s" : ""} ago`;
   }
 
   function isRecent(dateString: string, days = 3) {
-    const sermonDate = parseLocalDate(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - sermonDate.getTime()
-    const diffDays = diffMs / (1000 * 60 * 60 * 24)
+    const sermonDate = parseLocalDate(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - sermonDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-    return diffDays <= days
+    return diffDays <= days;
   }
 
+  function applySeriesFilter(series: string) {
+    // If the series is already active, do nothing
+    if (seriesFilter === series) return;
+
+    setSeriesFilter(series);
+    setFilterNotice(`Filtered by series: ${series}`);
+
+    // Auto-hide message after 2 seconds
+    setTimeout(() => {
+      setFilterNotice(null);
+    }, 2000);
+  }
+
+  /******* END HELPER FUNCTIONS *******/
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-[1200px]">
-        <img src="/images/nbbc-badge-color.svg" alt="NBBC Badge" className="mx-auto md:ml-0 md:mr-auto mb-8 w-38" />
+        <img
+          src="/images/nbbc-badge-color.svg"
+          alt="NBBC Badge"
+          className="mx-auto md:ml-0 md:mr-auto mb-8 w-38"
+        />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
           {/* Sidebar (filters) */}
@@ -208,8 +318,9 @@ function App() {
               </Button>
             </div>
             <div
-              className={`flex flex-col gap-4 ${filtersOpen ? "block" : "hidden"
-                } lg:block`}
+              className={`flex flex-col gap-4 ${
+                filtersOpen ? "block" : "hidden"
+              } lg:block`}
             >
               {/* Filters */}
               <div className="mb-6 flex flex-col gap-4 rounded-lg bg-white p-4 shadow-md">
@@ -219,7 +330,10 @@ function App() {
                       Filter by
                     </p>
 
-                    <Select value={seriesFilter} onValueChange={setSeriesFilter}>
+                    <Select
+                      value={seriesFilter}
+                      onValueChange={setSeriesFilter}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="All Series" />
                       </SelectTrigger>
@@ -237,7 +351,9 @@ function App() {
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline">
-                            {dateFrom ? dateFrom.toISOString().slice(0, 10) : "From Date"}
+                            {dateFrom
+                              ? dateFrom.toISOString().slice(0, 10)
+                              : "From Date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -252,7 +368,9 @@ function App() {
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline">
-                            {dateTo ? dateTo.toISOString().slice(0, 10) : "To Date"}
+                            {dateTo
+                              ? dateTo.toISOString().slice(0, 10)
+                              : "To Date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -271,43 +389,83 @@ function App() {
                         placeholder="Max runtime"
                         value={maxLength}
                         onChange={(e) =>
-                          setMaxLength(e.target.value === "" ? "" : Number(e.target.value))
+                          setMaxLength(
+                            e.target.value === "" ? "" : Number(e.target.value)
+                          )
                         }
                       />
+
+                      <Select
+                        value={formatFilter}
+                        onValueChange={setFormatFilter}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Formats" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Formats</SelectItem>
+                          <SelectItem value="audio">Audio</SelectItem>
+                          <SelectItem value="video">Video</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   {/* Active filter pills */}
                   <div className="empty:hidden flex flex-wrap gap-2">
                     {search && (
-                      <Badge onClick={() => setSearch("")} className="cursor-pointer">
+                      <Badge
+                        onClick={() => setSearch("")}
+                        className="cursor-pointer"
+                      >
                         Keyword: {search} ×
                       </Badge>
                     )}
                     {seriesFilter !== "all" && (
-                      <Badge onClick={() => setSeriesFilter("all")} className="cursor-pointer">
+                      <Badge
+                        onClick={() => setSeriesFilter("all")}
+                        className="cursor-pointer"
+                      >
                         Series: {seriesFilter} ×
                       </Badge>
                     )}
                     {maxLength !== "" && (
-                      <Badge onClick={() => setMaxLength("")} className="cursor-pointer">
+                      <Badge
+                        onClick={() => setMaxLength("")}
+                        className="cursor-pointer"
+                      >
                         Max Length: {maxLength} ×
                       </Badge>
                     )}
                     {dateFrom && (
-                      <Badge onClick={() => setDateFrom(undefined)} className="cursor-pointer">
+                      <Badge
+                        onClick={() => setDateFrom(undefined)}
+                        className="cursor-pointer"
+                      >
                         From: {dateFrom.toISOString().slice(0, 10)} ×
                       </Badge>
                     )}
                     {dateTo && (
-                      <Badge onClick={() => setDateTo(undefined)} className="cursor-pointer">
+                      <Badge
+                        onClick={() => setDateTo(undefined)}
+                        className="cursor-pointer"
+                      >
                         To: {dateTo.toISOString().slice(0, 10)} ×
                       </Badge>
                     )}
+                    {formatFilter !== "all" && (
+                      <Badge
+                        onClick={() => setFormatFilter("all")}
+                        className="cursor-pointer"
+                      >
+                        Format: {formatFilter} ×
+                      </Badge>
+                    )}
+
                     {sortBy !== "none" && (
                       <Badge
                         onClick={() => {
-                          setSortBy("none")
-                          setSortOrder("desc")
+                          setSortBy("none");
+                          setSortOrder("desc");
                         }}
                         className="cursor-pointer"
                       >
@@ -321,7 +479,10 @@ function App() {
                       Sort by
                     </p>
                     <div className="flex gap-2">
-                      <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(v) => setSortBy(v as any)}
+                      >
                         <SelectTrigger className="w-full md:w-40">
                           <SelectValue placeholder="Sort By" />
                         </SelectTrigger>
@@ -351,13 +512,14 @@ function App() {
                   className="mr-auto"
                   variant="secondary"
                   onClick={() => {
-                    setSearch("")
-                    setSeriesFilter("all")
-                    setMaxLength("")
-                    setDateFrom(undefined)
-                    setDateTo(undefined)
-                    setSortBy("none")
-                    setSortOrder("desc")
+                    setSearch("");
+                    setSeriesFilter("all");
+                    setMaxLength("");
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                    setFormatFilter("all");
+                    setSortBy("none");
+                    setSortOrder("desc");
                   }}
                 >
                   Clear Filters
@@ -368,86 +530,120 @@ function App() {
 
           {/* Main content (grid) */}
           <main>
+            <div className="mb-4 h-[40px]">
+              <div
+                className={`h-full rounded-md bg-green-200 border-solid border-green-400 border-b-2 px-4 py-2 text-sm text-primary shadow-sm transition-all duration-500 ease-out ${
+                  filterNotice
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 -translate-y-2 pointer-events-none"
+                }`}
+              >
+                {filterNotice}
+              </div>
+            </div>
+
             {/* Sermon grid */}
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
               {initialLoading
                 ? Array.from({ length: ITEMS_PER_PAGE }).map((_, i) => (
-                  <SermonCardSkeleton key={i} />
-                ))
+                    <SermonCardSkeleton key={i} />
+                  ))
                 : paginatedSermons.map((sermon, idx) => {
-                  const showNew = isRecent(sermon.date)
-                  const imageUrl =
-                    sermon.image?.trim() && sermon.image.trim() !== ""
-                      ? sermon.image
-                      : PLACEHOLDER_IMAGE
+                    const showNew = isRecent(sermon.date);
+                    const imageUrl =
+                      sermon.image?.trim() && sermon.image.trim() !== ""
+                        ? sermon.image
+                        : PLACEHOLDER_IMAGE;
 
-                  return (
-                    <Card
-                      key={idx}
-                      onClick={() => window.open(sermon.link, "_blank")}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          window.open(sermon.link, "_blank")
-                        }
-                      }}
-                      className="fade-in group cursor-pointer overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary flex flex-col py-0 gap-0"
-                    >
-                      <div className="relative">
-                        <img
-                          src={imageUrl}
-                          alt={sermon.title || "Sermon"}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          onError={(e) => {
-                            e.currentTarget.src = PLACEHOLDER_IMAGE
-                          }}
-                        />
+                    return (
+                      <Card
+                        key={idx}
+                        onClick={() => window.open(sermon.link, "_blank")}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            window.open(sermon.link, "_blank");
+                          }
+                        }}
+                        className="fade-in group cursor-pointer overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary flex flex-col py-0 gap-0"
+                      >
+                        <div className="relative">
+                          <img
+                            src={imageUrl}
+                            alt={sermon.title || "Sermon"}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => {
+                              e.currentTarget.src = PLACEHOLDER_IMAGE;
+                            }}
+                          />
 
-                        {/* Runtime overlay (YouTube-style) */}
-                        <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
-                          {sermon.length} min
-                        </div>
-                      </div>
-
-                      {/* New badge for recent sermons */}
-                      {showNew && (
-                        <Badge className="absolute top-2 left-2 bg-green-600 text-white hover:bg-green-600">
-                          New
-                        </Badge>
-                      )}
-
-                      <CardContent className="p-4 flex flex-col flex-1">
-                        <div className="flex-1">
-                          <h2 className="my-1 text-md font-semibold line-clamp-2">
-                            {sermon.title ||
-                              //`${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
-                              `${sermon.series ?? "Series"}`}
-                          </h2>
-
-                          <div className="mb-2 flex items-center gap-2 min-w-0">
-                            {sermon.series && (
-                              <Badge>
-                                <p className="text-[10px] truncate max-w-full">{sermon.series}</p>
-                              </Badge>
-                            )}
-                            {sermon.part && (
-                              <Badge variant="secondary" className="flex-shrink-0 whitespace-nowrap">
-                                <p className="text-[10px] flex-shrink-0 whitespace-nowrap">
-                                  Part {sermon.part}
-                                </p>
-                              </Badge>
-                            )}
+                          {/* Runtime overlay (YouTube-style) */}
+                          <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
+                            {sermon.length} min
                           </div>
                         </div>
-                        <p className="empty:hidden text-sm text-muted-foreground mt-3">{sermon.preacher}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {sermon.format} • {getRelativeTime(sermon.date)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+
+                        {/* New badge for recent sermons */}
+                        {showNew && (
+                          <Badge className="absolute top-2 left-2 bg-green-600 text-white hover:bg-green-600">
+                            New
+                          </Badge>
+                        )}
+
+                        <CardContent className="p-4 flex flex-col flex-1">
+                          <div className="flex-1">
+                            <h2 className="my-1 text-md font-semibold line-clamp-2">
+                              {sermon.title ||
+                                //`${sermon.series ?? "Series"} – Part ${sermon.part ?? ""}`}
+                                `${sermon.series ?? "Series"}`}
+                            </h2>
+
+                            <div className="mb-2 flex items-center gap-2 min-w-0">
+                              {sermon.series && (
+                                <Badge
+                                  role="button"
+                                  tabIndex={0}
+                                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    applySeriesFilter(sermon.series!);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.stopPropagation();
+                                      applySeriesFilter(sermon.series!);
+                                    }
+                                  }}
+                                >
+                                  <p className="text-[10px] truncate max-w-full">
+                                    {sermon.series}
+                                  </p>
+                                </Badge>
+                              )}
+
+                              {sermon.part && (
+                                <Badge
+                                  variant="secondary"
+                                  className="flex-shrink-0 whitespace-nowrap"
+                                >
+                                  <p className="text-[10px] flex-shrink-0 whitespace-nowrap">
+                                    Part {sermon.part}
+                                  </p>
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <p className="empty:hidden text-sm text-muted-foreground mt-3">
+                            {sermon.preacher}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {sermon.format} • {getRelativeTime(sermon.date)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
             </div>
             {/* Pagination */}
             {!initialLoading && totalPages > 1 && (
@@ -461,7 +657,7 @@ function App() {
                 </Button>
 
                 {Array.from({ length: totalPages }).map((_, i) => {
-                  const page = i + 1
+                  const page = i + 1;
                   return (
                     <Button
                       key={page}
@@ -470,27 +666,28 @@ function App() {
                     >
                       {page}
                     </Button>
-                  )
+                  );
                 })}
 
                 <Button
                   variant="outline"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                 >
                   Next
                 </Button>
               </div>
             )}
-
           </main>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
 
 /*
 Improvements:
@@ -507,8 +704,8 @@ Improvements:
 - ✅ Rotate private key for Netlify function.
 - ✅ During alpha stage, disable caching on fetch to always get latest sermons.
 - ✅ Include file format (Video or Audio) in cards.
-- Include file format in filters.
+- ✅ Include file format (Video or Audio) in filters.
 - In full release, implement a chaching strategy to avoid rate limits.
-- Incorporate filtering into URL query params for sharing and enabling the next enhancment:
-- Allow clicking on card badges to set filters (i.e. click on "Series" badge to filter by that series).
+- ✅ Incorporate filtering into URL query params for sharing and enabling the next enhancment:
+- ✅ Allow clicking on card badges to set filters (i.e. click on "Series" badge to filter by that series).
 */
