@@ -4,19 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import SermonCardSkeleton from "@/components/SermonCardSkeleton";
 
 type Sermon = {
@@ -41,18 +31,8 @@ function App() {
   const [sermons, setSermons] = useState<Sermon[]>([]);
 
   /******* FILTER STATES *******/
-  // const [search, setSearch] = useState("")
-  // const [seriesFilter, setSeriesFilter] = useState("all")
-  // const [maxLength, setMaxLength] = useState<number | "">("")
-  // const [dateFrom, setDateFrom] = useState<Date | undefined>()
-  // const [dateTo, setDateTo] = useState<Date | undefined>()
-  // const [sortBy, setSortBy] = useState<"date" | "length" | "none">("none")
-  // const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
-  // const [currentPage, setCurrentPage] = useState(1)
   const [search, setSearch] = useState(() => getQueryParam("q") ?? "");
-  const [seriesFilter, setSeriesFilter] = useState(
-    () => getQueryParam("series") ?? "all"
-  );
+  const [seriesFilter, setSeriesFilter] = useState(() => getQueryParam("series") ?? "all");
   const [maxLength, setMaxLength] = useState<number | "">(() => {
     const v = getQueryParam("maxLength");
     return v ? Number(v) : "";
@@ -68,12 +48,8 @@ function App() {
   const [formatFilter, setFormatFilter] = useState(() => {
     return getQueryParam("format") ?? "all";
   });
-  const [sortBy, setSortBy] = useState<"date" | "length" | "none">(
-    () => (getQueryParam("sort") as any) ?? "none"
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
-    () => (getQueryParam("order") as any) ?? "desc"
-  );
+  const [sortBy, setSortBy] = useState<"date" | "length" | "none">(() => (getQueryParam("sort") as any) ?? "none");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() => (getQueryParam("order") as any) ?? "desc");
   const [currentPage, setCurrentPage] = useState(() => {
     const v = getQueryParam("page");
     return v ? Number(v) : 1;
@@ -102,7 +78,7 @@ function App() {
       })
       .catch((err) => console.error("Failed to fetch sermons:", err))
       .finally(() => {
-        const MIN_LOADING_TIME = 2000; // ms
+        const MIN_LOADING_TIME = 2000; // Time in ms to show skeleton loaders. On fast connections, this prevents jarring quick flashes.
         const elapsed = Date.now() - loadStartTime;
         const remaining = Math.max(0, MIN_LOADING_TIME - elapsed);
 
