@@ -279,10 +279,7 @@ function App() {
     // If the series is already active, do nothing
     if (seriesFilter === series) return;
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth", // Smooth scrolling animation
-    });
+    window.scrollTo(0, 0);
     setSeriesFilter(series);
     setFilterNotice(`Filtered by series: ${series}`);
     setFilterNoticeVisible(true);
