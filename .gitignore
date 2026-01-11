@@ -28,6 +28,3 @@ dist-ssr
 
 # Environment variables file
 .env
-
-# Miscellaneous
-.enhancements.md

@@ -51,7 +51,8 @@ export const handler: Handler = async () => {
           title: TITLE || "",
           series: SERIES || undefined,
           part: PART ? Number(PART) : undefined,
-          author: (AUTHOR === "Luke Iannello" || AUTHOR === "") ? "" : "Presented by " + AUTHOR,
+          // If your content is usually authored by a specific person, below is an example of how to only show the author if they're different from the default person.
+          author: (AUTHOR === "Aaron Banister" || AUTHOR === "") ? "" : "Presented by " + AUTHOR,
           link: LINK,
           length: Number(LENGTH),
           image: IMAGE,

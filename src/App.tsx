@@ -117,8 +117,8 @@ function App() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-[1200px]" id="app-container">
         <img
-          src="/images/nbbc-badge-color.svg"
-          alt="NBBC Badge"
+          src="/images/contentify.svg"
+          alt="Contentify Logo"
           className="mx-auto md:ml-0 md:mr-auto mb-8 w-38"
         />
 
