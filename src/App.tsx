@@ -1,4 +1,4 @@
-/******* INTERNAL *******/
+/******* INTERNAL COMPONENTS *******/
 import FilterPanel from "@/components/filter-and-sort/FilterPanel";
 import FilterNotice from "@/components/content/FilterNotice";
 import ContentGrid from "@/components/content/ContentGrid";
@@ -17,7 +17,7 @@ function App() {
   // Fetch content data
   const { content, initialLoading } = useContentData();
 
-  // Manage all filter and pagination state
+  // Manage all filter and pagination states
   const {
     search,
     setSearch,
@@ -148,7 +148,7 @@ function App() {
             onReset={handleResetFilters}
           />
 
-          {/* Main content (grid) */}
+          {/* Main content */}
           <main>
             <FilterNotice
               message={filterNotice}

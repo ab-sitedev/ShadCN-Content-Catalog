@@ -37,7 +37,7 @@ export default function ContentCard({ content, onSeriesClick }: ContentCardProps
                     }}
                 />
 
-                {/* Runtime overlay (YouTube-style) */}
+                {/* Runtime overlay */}
                 <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-0.5 text-xs font-medium text-white">
                     {content.length} min
                 </div>
@@ -52,7 +52,6 @@ export default function ContentCard({ content, onSeriesClick }: ContentCardProps
                 <div className="flex-1">
                     <h2 className="my-1 text-md font-semibold line-clamp-2">
                         {content.title ||
-                            //`${content.series ?? "Series"} – Part ${content.part ?? ""}`}
                             `${content.series ?? "Series"}`}
                     </h2>
 
