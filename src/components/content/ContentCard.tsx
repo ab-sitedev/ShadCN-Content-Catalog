@@ -12,17 +12,17 @@ interface ContentCardProps {
 export default function ContentCard({ content, onSeriesClick }: ContentCardProps) {
     const showNew = isRecent(content.date);
     const imageUrl =
-                    content.image?.trim() && content.image.trim() !== ""
-                      ? content.image
+                    content.thumbnail?.trim() && content.thumbnail.trim() !== ""
+                      ? content.thumbnail
                       : PLACEHOLDER_IMAGE;
     return (
         <Card
-            onClick={() => window.open(content.link, "_blank")}
+            onClick={() => window.open(content.url, "_blank")}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                    window.open(content.link, "_blank");
+                    window.open(content.url, "_blank");
                 }
             }}
             className="fade-in group cursor-pointer overflow-hidden transition-all duration-150 hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary flex flex-col py-0 gap-0"
@@ -91,7 +91,7 @@ export default function ContentCard({ content, onSeriesClick }: ContentCardProps
                     </div>
                 </div>
                 <p className="empty:hidden text-sm text-muted-foreground mt-3">
-                    {content.author}
+                    {content.speaker}
                 </p>
                 <p className="text-xs text-muted-foreground">
                     {content.format} • {getRelativeTime(content.date)}

@@ -3,9 +3,9 @@ export type Content = {
     title?: string;
     series?: string;
     part?: number;
-    author: string;
-    link: string;
+    speaker: string;
+    url: string;
     length: number;
-    image?: string;
+    thumbnail?: string;
     format: string;
 };

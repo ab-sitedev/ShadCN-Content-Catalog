@@ -7,11 +7,20 @@ export function useContentData() {
   const [loadStartTime] = useState(() => Date.now());
 
   useEffect(() => {
-    fetch("/.netlify/functions/content", { cache: "no-store" })
+    fetch("/.netlify/functions/dynamoDB", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: Content[]) => {
         console.log("Fetched content:", data);
-        setContent(data);
+
+        // Sort by date descending (newest first)
+        const sorted = data.sort((a, b) => {
+          // Convert to timestamps for comparison
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return dateB - dateA; // descending
+        });
+
+        setContent(sorted);
       })
       .catch((err) => console.error("Failed to fetch content:", err))
       .finally(() => {
